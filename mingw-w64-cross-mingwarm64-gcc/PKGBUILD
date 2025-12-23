@@ -18,19 +18,23 @@ msys2_references=(
 )
 groups=("${_mingw_suff}-toolchain" "${_mingw_suff}")
 depends=("zlib" "mpc" "isl" "libzstd")
-makedepends=("gcc" 'lndir' "gmp-devel" "mpc-devel" "zlib-devel" "isl-devel" 'autotools' 'gperf' 'libzstd-devel'
+makedepends=('lndir' "gmp-devel" "mpc-devel" "zlib-devel" "isl-devel" 'autotools' 'gperf' 'libzstd-devel'
              "${_mingw_suff}-mingwarm64-crt" "${_mingw_suff}-mingwarm64-headers" "${_mingw_suff}-mingwarm64-winpthreads"
              "${_mingw_suff}-mingwarm64-windows-default-manifest" "${_mingw_suff}-mingwarm64-binutils" "git")
-provides=("mingw-w64-aarch64-cc" "mingw-w64-aarch64-gcc-libs")
+provides=("mingw-w64-aarch64-cc" "mingw-w64-aarch64-gcc-libs" "mingw-w64-aarch64-gcc-ada")
 #checkdepends=('dejagnu')
 options=('!strip' 'staticlibs' '!emptydirs' '!buildflags')
 _commit='f565ee034dab4c5cfd130accbe401b2b2a9afffd'
 source=("${_realname}"::"git+https://github.com/Windows-on-ARM-Experiments/gcc-woarm64.git#branch=fix-va-list"
+        0007-Build-EXTRA_GNATTOOLS-for-Ada.patch
+        0011-Enable-shared-gnat-implib.patch
         0012-Handle-spaces-in-path-for-default-manifest.patch
         0014-gcc-9-branch-clone_function_name_1-Retain-any-stdcall-suffix.patch
         0020-libgomp-Don-t-hard-code-MS-printf-attributes.patch
         0200-add-m-no-align-vector-insn-option-for-i386.patch)
 sha256sums=('SKIP'
+            '90d5cb570083f9dea4ac0f0f87e3e8d2230f5052e6f9b946061a20a224a9d195'
+            '5ef4148acc4a2b7ed648d4fe75fab5545e84b4b93a12d6ba4e4ea6061dd635fa'
             'e98805ead7d78ee2a92f237894c4b2b7ddc1688e1b517d8c04f28d440202e40f'
             'fd9bdecb2bbc4796bbc9f00b708dac42ef9e3464a06d6d27e5475cee117de5be'
             'ad1f7b5e7afaaec008b7cbd14feea13a10989fa91bda7003af72d457619bb199'
@@ -81,6 +85,8 @@ prepare() {
 
   # MinGW Patches
   apply_patch_with_msg \
+    0007-Build-EXTRA_GNATTOOLS-for-Ada.patch \
+    0011-Enable-shared-gnat-implib.patch \
     0012-Handle-spaces-in-path-for-default-manifest.patch \
     0014-gcc-9-branch-clone_function_name_1-Retain-any-stdcall-suffix.patch \
     0020-libgomp-Don-t-hard-code-MS-printf-attributes.patch \
@@ -88,6 +94,8 @@ prepare() {
 }
 
 _build() {
+  set +x
+  export PATH=/Users/runneradmin/AppData/Local/alire/cache/toolchains/gnat_native_15.2.1_346e2e00/bin:$PATH
   _target=$1
   export lt_cv_deplibs_check_method='pass_all'
 
@@ -99,7 +107,7 @@ _build() {
       local _arch=armv8.1-a
       local _tune=cortex-x1
       local _conf=""
-      _langs="${_langs} fortran"
+      _langs="${_langs},fortran,ada"
     ;;
   esac
 
@@ -149,10 +157,12 @@ _build() {
 }
 
 _package() {
+  set +x
+  export PATH=/Users/runneradmin/AppData/Local/alire/cache/toolchains/gnat_native_15.2.1_346e2e00/bin:$PATH
   _target=$1
   cd ${srcdir}/gcc-build-${_target}
   make -j1 DESTDIR=${pkgdir} install
-  mv ${pkgdir}/opt/lib/gcc/${_target}/lib/libgcc_s.a ${pkgdir}/opt/lib/gcc/${_target}/${_realver}/
+  mv ${pkgdir}/opt/lib/gcc/${_target}/shlib/libgcc_s.a ${pkgdir}/opt/lib/gcc/${_target}/${_realver}/
   mv ${pkgdir}/opt/lib/gcc/${_target}/libgcc*.dll ${pkgdir}/opt/lib/gcc/${_target}/${_realver}/
   for _f in ${pkgdir}/opt/bin/*.exe; do
     strip -s ${_f}
